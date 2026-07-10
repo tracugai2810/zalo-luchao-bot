@@ -42,21 +42,21 @@ app.post(['/', '/webhook'], async (req, res) => {
     console.log('Body:', JSON.stringify(body, null, 2));
     console.log('=======================================\n');
 
-    // === XÃ¡c thá»±c Secret Token ===
-    const secretToken = process.env.ZALO_SECRET_TOKEN;
+    // === Xác thực Secret Token ===
+    const secretToken = 'z8fTaV4U-N0Nx5-gfw';
     if (secretToken) {
       const headerSecret =
         req.headers['x-bot-api-secret-token'] ||
         req.headers['x-zalobot-secret-token'] ||
         req.headers['x-zalo-signature'];
       if (headerSecret && headerSecret !== secretToken) {
-        console.log('âŒ Secret token khÃ´ng khá»›p, bá» qua');
+        console.log('❌ Secret token không khớp, bỏ qua');
         return;
       }
     }
 
     // === TrÃ­ch xuáº¥t thÃ´ng tin tin nháº¯n ===
-    // Há»— trá»£ nhiá»u format payload khÃ¡c nhau tá»« Zalo
+    // Há»— trá»£ nhiá» u format payload khÃ¡c nhau tá»« Zalo
     let text = '';
     let chatId = '';
     let senderId = '';
@@ -171,7 +171,7 @@ const path = require('path');
 //  API ZALO - Xóa sạch dấu cách thừa trong Token
 // ============================================================
 const BOT_TOKEN = () => {
-  let t = process.env.ZALO_BOT_TOKEN || '';
+  let t = '1141953159893961283:GyDTCCAwzZvHuwFKsnXxiBmXWgwnlfrUcyOFtjVmqHjhWyxQRfeJjqrpJYWZqWli';
   t = t.replace(/[^a-zA-Z0-9:]/g, ''); // Xóa toàn bộ ký tự lạ, dấu ngoặc kép, khoảng trắng
   return t;
 };
