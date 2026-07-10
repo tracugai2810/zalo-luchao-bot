@@ -10,39 +10,33 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Log Táº¤T Cáº¢ request gá»­i Ä‘áº¿n Ä‘á»ƒ debug
+// Log tat ca request de debug
 app.use((req, res, next) => {
   console.log(`[HTTP] ${req.method} ${req.url}`);
   next();
 });
 
-// ============================================================
-//  Health check â€” Má»Ÿ trÃ¬nh duyá»‡t vÃ o URL gá»‘c Ä‘á»ƒ kiá»ƒm tra bot sá»‘ng
-// ============================================================
+// Health check
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    bot: 'Zalo Lá»¥c HÃ o Bot',
+    bot: 'Zalo Luc Hao Bot',
     time: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
   });
 });
 
-// ============================================================
-//  Webhook â€” Nháº­n tin nháº¯n tá»« Zalo Bot Platform
-// ============================================================
+// Webhook
 app.post(['/', '/webhook'], async (req, res) => {
-  // QUAN TRá»ŒNG: Tráº£ 200 OK ngay láº­p tá»©c (Zalo yÃªu cáº§u < 2 giÃ¢y)
   res.status(200).json({ status: 'ok' });
 
   try {
     const body = req.body;
 
-    // === LOG Ä‘á»ƒ debug ===
     console.log('\n========== WEBHOOK RECEIVED ==========');
     console.log('Body:', JSON.stringify(body, null, 2));
     console.log('=======================================\n');
 
-    // === Xác thực Secret Token ===
+    // Quet Secret Token
     const secretToken = 'z8fTaV4U-N0Nx5-gfw';
     if (secretToken) {
       const headerSecret =
@@ -50,19 +44,16 @@ app.post(['/', '/webhook'], async (req, res) => {
         req.headers['x-zalobot-secret-token'] ||
         req.headers['x-zalo-signature'];
       if (headerSecret && headerSecret !== secretToken) {
-        console.log('❌ Secret token không khớp, bỏ qua');
+        console.log('Secret token khong khop, bo qua');
         return;
       }
     }
 
-    // === TrÃ­ch xuáº¥t thÃ´ng tin tin nháº¯n ===
-    // Há»— trá»£ nhiá» u format payload khÃ¡c nhau tá»« Zalo
     let text = '';
     let chatId = '';
     let senderId = '';
     let timestamp = Date.now();
 
-    // Format 1: Telegram-like  { message: { text, chat: { id } } }
     if (body.message) {
       text = body.message.text || body.message.content || '';
       chatId =
@@ -76,11 +67,9 @@ app.post(['/', '/webhook'], async (req, res) => {
         body.message.senderId ||
         '';
       if (body.message.date) {
-        // Náº¿u date > 10^12 thÃ¬ Ä‘Ã£ lÃ  milliseconds, ngÆ°á»£c láº¡i lÃ  seconds
         timestamp = body.message.date > 10000000000 ? body.message.date : body.message.date * 1000;
       }
     }
-    // Format 2: Zalo OA  { event_name, sender, recipient, message }
     else if (body.event_name) {
       text = body.message?.text || body.message?.content || '';
       chatId =
@@ -92,73 +81,54 @@ app.post(['/', '/webhook'], async (req, res) => {
         timestamp = parseInt(body.timestamp);
       }
     }
-    // Format 3: Direct  { text, chat_id }
     else if (body.text || body.content) {
       text = body.text || body.content || '';
       chatId = body.chat_id || body.chatId || body.recipient_id || '';
       senderId = body.sender_id || body.senderId || '';
     }
 
-    if (!text) {
-      console.log('âš ï¸ KhÃ´ng cÃ³ text trong tin nháº¯n');
-      return;
-    }
-    if (!chatId) {
-      console.log('âš ï¸ KhÃ´ng cÃ³ chatId â€” kiá»ƒm tra láº¡i format webhook');
-      console.log('Táº¥t cáº£ keys:', Object.keys(body));
-      return;
-    }
+    console.log(`Tin nhan: "${text}" | Chat: ${chatId} | Tu: ${senderId}`);
 
-    console.log(`ðŸ“© Tin nháº¯n: "${text}" | Chat: ${chatId} | Tá»«: ${senderId}`);
-
-    // === TrÃ­ch xuáº¥t sá»‘ seri ===
     const seri = extractSeri(text);
     if (!seri) {
-      console.log('â„¹ï¸ KhÃ´ng tÃ¬m tháº¥y sá»‘ seri, bá» qua');
+      console.log('Khong tim thay so seri, bo qua');
       return;
     }
 
-    console.log(`ðŸ”¢ Seri tÃ¬m tháº¥y: ${seri}`);
+    console.log(`Seri tim thay: ${seri}`);
 
-    // === Xá»­ lÃ½ báº¥t Ä‘á»“ng bá»™ ===
     processQue(seri, chatId, timestamp).catch(err => {
-      console.error('âŒ Lá»—i processQue:', err);
+      console.error('Loi processQue:', err);
     });
 
   } catch (err) {
-    console.error('âŒ Webhook error:', err);
+    console.error('Webhook error:', err);
   }
 });
 
-// ============================================================
-//  Xá»­ lÃ½ láº­p quáº»
-// ============================================================
+// Xu ly lap que
 async function processQue(seri, chatId, timestamp) {
   const date = new Date(timestamp);
-  // Äáº£m báº£o dÃ¹ng mÃºi giá» Viá»‡t Nam
   const vnTime = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
 
-  console.log(`â³ Láº­p quáº» seri ${seri} â€” thá»i gian: ${vnTime.toLocaleString('vi-VN')}`);
+  console.log(`Lap que seri ${seri} - thoi gian: ${vnTime.toLocaleString('vi-VN')}`);
 
-  // BÃ¡o cho user biáº¿t Ä‘ang xá»­ lÃ½
-  await sendMessage(chatId, `â³ Äang láº­p quáº» seri ${seri}...`).catch(() => {});
+  // Gui tin nhan thong bao dang lap que (dung khong dau de tranh loi font Zalo)
+  await sendMessage(chatId, `Dang lap que cho seri ${seri}, vui long cho giay lat...`).catch(() => {});
 
   try {
-    // Chá»¥p áº£nh quáº»
     const imagePath = await captureQueImage(seri, vnTime);
-    console.log(`ðŸ“¸ ÄÃ£ chá»¥p áº£nh: ${imagePath}`);
+    console.log(`Da chup anh: ${imagePath}`);
 
-    // Gá»­i áº£nh vá» chat
     await sendPhoto(chatId, imagePath);
-    console.log(`âœ… ÄÃ£ gá»­i áº£nh vá» chat ${chatId}`);
+    console.log(`Da gui anh ve chat ${chatId}`);
 
-    // XÃ³a file táº¡m
     const fs = require('fs');
-    try { fs.unlinkSync(imagePath); } catch (e) { /* ignore */ }
+    try { fs.unlinkSync(imagePath); } catch (e) {}
 
   } catch (err) {
-    console.error(`âŒ Lá»—i:`, err.message);
-    await sendMessage(chatId, `âŒ Lá»—i láº­p quáº»: ${err.message}`).catch(() => {});
+    console.error(`Loi processQue:`, err.message);
+    await sendMessage(chatId, `Co loi xay ra khi lap que: ${err.message}`).catch(() => {});
   }
 }
 
@@ -167,12 +137,9 @@ const fs = require('fs');
 const FormData = require('form-data');
 const path = require('path');
 
-// ============================================================
-//  API ZALO - Xóa sạch dấu cách thừa trong Token
-// ============================================================
 const BOT_TOKEN = () => {
   let t = '1141953159893961283:GyDTCCAwzZvHuwFKsnXxiBmXWgwnlfrUcyOFtjVmqHjhWyxQRfeJjqrpJYWZqWli';
-  t = t.replace(/[^a-zA-Z0-9:]/g, ''); // Xóa toàn bộ ký tự lạ, dấu ngoặc kép, khoảng trắng
+  t = t.replace(/[^a-zA-Z0-9:]/g, '');
   return t;
 };
 const BASE_URL = () => `https://bot-api.zaloplatforms.com/bot${BOT_TOKEN()}`;
@@ -180,7 +147,7 @@ const BASE_URL = () => `https://bot-api.zaloplatforms.com/bot${BOT_TOKEN()}`;
 async function sendMessage(chatId, text) {
   try {
     const url = `${BASE_URL()}/sendMessage`;
-    console.log(`📤 sendMessage → chat: ${chatId} | Token length: ${BOT_TOKEN().length}`);
+    console.log(`sendMessage -> chat: ${chatId}`);
 
     const response = await axios.post(url, {
       chat_id: chatId,
@@ -190,10 +157,10 @@ async function sendMessage(chatId, text) {
       timeout: 10000
     });
 
-    console.log('ðŸ“¤ sendMessage response:', JSON.stringify(response.data));
+    console.log('sendMessage response:', JSON.stringify(response.data));
     return response.data;
   } catch (err) {
-    console.error('âŒ sendMessage error:', err.response?.data || err.message);
+    console.error('sendMessage error:', err.response?.data || err.message);
     throw err;
   }
 }
@@ -201,11 +168,12 @@ async function sendMessage(chatId, text) {
 async function sendPhoto(chatId, imagePath, caption = '') {
   try {
     const url = `${BASE_URL()}/sendPhoto`;
-    console.log(`📤 sendPhoto → chat: ${chatId}, file: ${path.basename(imagePath)} | Token length: ${BOT_TOKEN().length}`);
+    console.log(`sendPhoto -> chat: ${chatId}, file: ${path.basename(imagePath)} | Token length: ${BOT_TOKEN().length}`);
 
+    const fileBuffer = fs.readFileSync(imagePath);
     const form = new FormData();
     form.append('chat_id', String(chatId));
-    form.append('photo', fs.createReadStream(imagePath), {
+    form.append('photo', fileBuffer, {
       filename: path.basename(imagePath),
       contentType: 'image/png'
     });
@@ -220,20 +188,14 @@ async function sendPhoto(chatId, imagePath, caption = '') {
       maxBodyLength: Infinity
     });
 
-    console.log('ðŸ“¤ sendPhoto response:', JSON.stringify(response.data));
+    console.log('sendPhoto response:', JSON.stringify(response.data));
     return response.data;
   } catch (err) {
-    console.error('âŒ sendPhoto error:', err.response?.data || err.message);
+    console.error('sendPhoto error:', err.response?.data || err.message);
     throw err;
   }
 }
 
-
-// ============================================
-//  Kh?i d?ng server
-// ============================================
 app.listen(PORT, () => {
-  console.log("\n?? Zalo L?c Hào Bot dang ch?y trên port " + PORT);
-  console.log("?? Webhook URL: https://<your-domain>/webhook");
-  console.log("? Kh?i d?ng lúc: " + new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) + "\n");
+  console.log(`Zalo Bot is running on port ${PORT}`);
 });
