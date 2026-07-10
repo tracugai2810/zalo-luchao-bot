@@ -4,7 +4,7 @@ const FormData = require('form-data');
 const path = require('path');
 
 // Zalo Bot Platform API (giống Telegram)
-const BOT_TOKEN = () => process.env.ZALO_BOT_TOKEN;
+const BOT_TOKEN = () => (process.env.ZALO_BOT_TOKEN || '').trim();
 const BASE_URL = () => `https://bot-api.zaloplatforms.com/bot${BOT_TOKEN()}`;
 
 /**

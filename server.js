@@ -11,6 +11,12 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Log TẤT CẢ request gửi đến để debug
+app.use((req, res, next) => {
+  console.log(`[HTTP] ${req.method} ${req.url}`);
+  next();
+});
+
 // ============================================================
 //  Health check — Mở trình duyệt vào URL gốc để kiểm tra bot sống
 // ============================================================
@@ -25,7 +31,7 @@ app.get('/', (req, res) => {
 // ============================================================
 //  Webhook — Nhận tin nhắn từ Zalo Bot Platform
 // ============================================================
-app.post('/webhook', async (req, res) => {
+app.post(['/', '/webhook'], async (req, res) => {
   // QUAN TRỌNG: Trả 200 OK ngay lập tức (Zalo yêu cầu < 2 giây)
   res.status(200).json({ status: 'ok' });
 
@@ -71,7 +77,8 @@ app.post('/webhook', async (req, res) => {
         body.message.senderId ||
         '';
       if (body.message.date) {
-        timestamp = body.message.date * 1000;
+        // Nếu date > 10^12 thì đã là milliseconds, ngược lại là seconds
+        timestamp = body.message.date > 10000000000 ? body.message.date : body.message.date * 1000;
       }
     }
     // Format 2: Zalo OA  { event_name, sender, recipient, message }
