@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Cấu hình phục vụ file ảnh tĩnh công khai từ thư mục temp để Zalo tự tải về
+app.use('/temp', express.static(path.join(__dirname, 'temp')));
+
 // Log tat ca request de debug
 app.use((req, res, next) => {
   console.log(`[HTTP] ${req.method} ${req.url}`);
@@ -97,7 +100,12 @@ app.post(['/', '/webhook'], async (req, res) => {
 
     console.log(`Seri tim thay: ${seri}`);
 
-    processQue(seri, chatId, timestamp).catch(err => {
+    // Lay public URL cua server tu request
+    const host = req.get('host');
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const publicUrlBase = `${protocol}://${host}`;
+
+    processQue(seri, chatId, timestamp, publicUrlBase).catch(err => {
       console.error('Loi processQue:', err);
     });
 
@@ -107,7 +115,7 @@ app.post(['/', '/webhook'], async (req, res) => {
 });
 
 // Xu ly lap que
-async function processQue(seri, chatId, timestamp) {
+async function processQue(seri, chatId, timestamp, publicUrlBase) {
   const date = new Date(timestamp);
   const vnTime = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
 
@@ -118,13 +126,21 @@ async function processQue(seri, chatId, timestamp) {
 
   try {
     const imagePath = await captureQueImage(seri, vnTime);
-    console.log(`Da chup anh: ${imagePath}`);
+    const filename = path.basename(imagePath);
+    const publicImageUrl = `${publicUrlBase}/temp/${filename}`;
+    console.log(`Da chup anh: ${imagePath} | Public URL: ${publicImageUrl}`);
 
-    await sendPhoto(chatId, imagePath);
+    // Gui anh bang cach truyen link anh cho Zalo tu tai ve
+    await sendPhoto(chatId, publicImageUrl);
     console.log(`Da gui anh ve chat ${chatId}`);
 
-    const fs = require('fs');
-    try { fs.unlinkSync(imagePath); } catch (e) {}
+    // Xoa file anh sau 10 phut de Zalo kip tai ve truoc khi xoa
+    setTimeout(() => {
+      try {
+        fs.unlinkSync(imagePath);
+        console.log(`Da xoa file anh tam: ${filename}`);
+      } catch (e) {}
+    }, 10 * 60 * 1000);
 
   } catch (err) {
     console.error(`Loi processQue:`, err.message);
@@ -165,34 +181,18 @@ async function sendMessage(chatId, text) {
   }
 }
 
-async function sendPhoto(chatId, imagePath, caption = '') {
+async function sendPhoto(chatId, photoUrl, caption = '') {
   try {
-    let url = `${BASE_URL()}/sendPhoto?chat_id=${encodeURIComponent(chatId)}`;
-    if (caption) {
-      url += `&caption=${encodeURIComponent(caption)}`;
-    }
-    
-    console.log(`sendPhoto -> chat: ${chatId}, file: ${path.basename(imagePath)} | Token length: ${BOT_TOKEN().length}`);
+    const url = `${BASE_URL()}/sendPhoto`;
+    console.log(`sendPhoto -> chat: ${chatId}, url: ${photoUrl}`);
 
-    const fileBuffer = fs.readFileSync(imagePath);
-    const form = new FormData();
-    form.append('photo', fileBuffer, {
-      filename: path.basename(imagePath),
-      contentType: 'image/png'
-    });
-
-    const headers = form.getHeaders();
-    try {
-      headers['Content-Length'] = form.getLengthSync();
-    } catch (e) {
-      console.log('Cannot get length sync:', e.message);
-    }
-
-    const response = await axios.post(url, form, {
-      headers: headers,
-      timeout: 30000,
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity
+    const response = await axios.post(url, {
+      chat_id: chatId,
+      photo: photoUrl,
+      caption: caption
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 15000
     });
 
     console.log('sendPhoto response:', JSON.stringify(response.data));
