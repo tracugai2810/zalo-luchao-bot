@@ -106,7 +106,7 @@ app.post(['/', '/webhook'], async (req, res) => {
 
     // Lay public URL cua server tu request
     const host = req.get('host');
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const protocol = 'https'; // Cuong che dung https de Zalo tai anh tin cay
     const publicUrlBase = `${protocol}://${host}`;
 
     processQue(seri, chatId, timestamp, publicUrlBase).catch(err => {
@@ -135,13 +135,11 @@ async function processQue(seri, chatId, timestamp, publicUrlBase) {
     await sendPhoto(chatId, publicImageUrl, 'Quẻ của lão sư đây');
     console.log(`Da gui anh ve chat ${chatId}`);
 
-    // Xoa file anh sau 10 phut de Zalo kip tai ve truoc khi xoa
-    setTimeout(() => {
-      try {
-        fs.unlinkSync(imagePath);
-        console.log(`Da xoa file anh tam: ${filename}`);
-      } catch (e) {}
-    }, 10 * 60 * 1000);
+    // Xoa file anh ngay lap tuc sau khi Zalo da tai xong
+    try {
+      fs.unlinkSync(imagePath);
+      console.log(`Da xoa file anh tam: ${filename}`);
+    } catch (e) {}
 
   } catch (err) {
     console.error(`Loi processQue:`, err.message);
