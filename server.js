@@ -125,17 +125,14 @@ async function processQue(seri, chatId, timestamp, publicUrlBase) {
 
   console.log(`Lap que seri ${seri} - thoi gian: ${vnTime.toLocaleString('vi-VN')}`);
 
-  // Gui tin nhan thong bao dang lap que (dung khong dau de tranh loi font Zalo)
-  await sendMessage(chatId, `Dang lap que cho seri ${seri}, vui long cho giay lat...`).catch(() => {});
-
   try {
     const imagePath = await captureQueImage(seri, vnTime);
     const filename = path.basename(imagePath);
     const publicImageUrl = `${publicUrlBase}/temp/${filename}`;
     console.log(`Da chup anh: ${imagePath} | Public URL: ${publicImageUrl}`);
 
-    // Gui anh bang cach truyen link anh cho Zalo tu tai ve
-    await sendPhoto(chatId, publicImageUrl);
+    // Gui anh bang cach truyen link anh cho Zalo tu tai ve kem theo caption
+    await sendPhoto(chatId, publicImageUrl, 'Quẻ của lão sư đây');
     console.log(`Da gui anh ve chat ${chatId}`);
 
     // Xoa file anh sau 10 phut de Zalo kip tai ve truoc khi xoa
