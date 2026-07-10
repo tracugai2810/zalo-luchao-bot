@@ -168,15 +168,19 @@ const FormData = require('form-data');
 const path = require('path');
 
 // ============================================================
-//  API ZALO - XÃ³a sáº¡ch dáº¥u cÃ¡ch thá»«a trong Token
+//  API ZALO - Xóa sạch dấu cách thừa trong Token
 // ============================================================
-const BOT_TOKEN = () => (process.env.ZALO_BOT_TOKEN || '').replace(/\s+/g, '');
+const BOT_TOKEN = () => {
+  let t = process.env.ZALO_BOT_TOKEN || '';
+  t = t.replace(/[^a-zA-Z0-9:]/g, ''); // Xóa toàn bộ ký tự lạ, dấu ngoặc kép, khoảng trắng
+  return t;
+};
 const BASE_URL = () => `https://bot-api.zaloplatforms.com/bot${BOT_TOKEN()}`;
 
 async function sendMessage(chatId, text) {
   try {
     const url = `${BASE_URL()}/sendMessage`;
-    console.log(`ðŸ“¤ sendMessage â†’ chat: ${chatId}`);
+    console.log(`📤 sendMessage → chat: ${chatId} | Token length: ${BOT_TOKEN().length}`);
 
     const response = await axios.post(url, {
       chat_id: chatId,
@@ -197,7 +201,7 @@ async function sendMessage(chatId, text) {
 async function sendPhoto(chatId, imagePath, caption = '') {
   try {
     const url = `${BASE_URL()}/sendPhoto`;
-    console.log(`ðŸ“¤ sendPhoto â†’ chat: ${chatId}, file: ${path.basename(imagePath)}`);
+    console.log(`📤 sendPhoto → chat: ${chatId}, file: ${path.basename(imagePath)} | Token length: ${BOT_TOKEN().length}`);
 
     const form = new FormData();
     form.append('chat_id', String(chatId));
