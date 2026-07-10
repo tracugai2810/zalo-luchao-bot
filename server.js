@@ -4,7 +4,6 @@ const { captureQueImage } = require('./src/divination/capture');
 const { extractSeri } = require('./src/utils/parser');
 const axios = require('axios');
 const fs = require('fs');
-const FormData = require('form-data');
 const path = require('path');
 
 const app = express();
