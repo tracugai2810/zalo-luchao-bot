@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const { captureQueImage } = require('./src/divination/capture');
 const { extractSeri } = require('./src/utils/parser');
+const axios = require('axios');
+const fs = require('fs');
+const FormData = require('form-data');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -148,10 +152,6 @@ async function processQue(seri, chatId, timestamp, publicUrlBase) {
   }
 }
 
-const axios = require('axios');
-const fs = require('fs');
-const FormData = require('form-data');
-const path = require('path');
 
 const BOT_TOKEN = () => {
   let t = '1141953159893961283:GyDTCCAwzZvHuwFKsnXxiBmXWgwnlfrUcyOFtjVmqHjhWyxQRfeJjqrpJYWZqWli';
