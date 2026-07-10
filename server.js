@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const { captureQueImage } = require('./src/divination/capture');
-const { sendPhoto, sendMessage } = require('./src/zalo/api');
 const { extractSeri } = require('./src/utils/parser');
 
 const app = express();
@@ -11,39 +10,39 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Log TẤT CẢ request gửi đến để debug
+// Log Táº¤T Cáº¢ request gá»­i Ä‘áº¿n Ä‘á»ƒ debug
 app.use((req, res, next) => {
   console.log(`[HTTP] ${req.method} ${req.url}`);
   next();
 });
 
 // ============================================================
-//  Health check — Mở trình duyệt vào URL gốc để kiểm tra bot sống
+//  Health check â€” Má»Ÿ trÃ¬nh duyá»‡t vÃ o URL gá»‘c Ä‘á»ƒ kiá»ƒm tra bot sá»‘ng
 // ============================================================
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    bot: 'Zalo Lục Hào Bot',
+    bot: 'Zalo Lá»¥c HÃ o Bot',
     time: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
   });
 });
 
 // ============================================================
-//  Webhook — Nhận tin nhắn từ Zalo Bot Platform
+//  Webhook â€” Nháº­n tin nháº¯n tá»« Zalo Bot Platform
 // ============================================================
 app.post(['/', '/webhook'], async (req, res) => {
-  // QUAN TRỌNG: Trả 200 OK ngay lập tức (Zalo yêu cầu < 2 giây)
+  // QUAN TRá»ŒNG: Tráº£ 200 OK ngay láº­p tá»©c (Zalo yÃªu cáº§u < 2 giÃ¢y)
   res.status(200).json({ status: 'ok' });
 
   try {
     const body = req.body;
 
-    // === LOG để debug ===
+    // === LOG Ä‘á»ƒ debug ===
     console.log('\n========== WEBHOOK RECEIVED ==========');
     console.log('Body:', JSON.stringify(body, null, 2));
     console.log('=======================================\n');
 
-    // === Xác thực Secret Token ===
+    // === XÃ¡c thá»±c Secret Token ===
     const secretToken = process.env.ZALO_SECRET_TOKEN;
     if (secretToken) {
       const headerSecret =
@@ -51,13 +50,13 @@ app.post(['/', '/webhook'], async (req, res) => {
         req.headers['x-zalobot-secret-token'] ||
         req.headers['x-zalo-signature'];
       if (headerSecret && headerSecret !== secretToken) {
-        console.log('❌ Secret token không khớp, bỏ qua');
+        console.log('âŒ Secret token khÃ´ng khá»›p, bá» qua');
         return;
       }
     }
 
-    // === Trích xuất thông tin tin nhắn ===
-    // Hỗ trợ nhiều format payload khác nhau từ Zalo
+    // === TrÃ­ch xuáº¥t thÃ´ng tin tin nháº¯n ===
+    // Há»— trá»£ nhiá»u format payload khÃ¡c nhau tá»« Zalo
     let text = '';
     let chatId = '';
     let senderId = '';
@@ -77,7 +76,7 @@ app.post(['/', '/webhook'], async (req, res) => {
         body.message.senderId ||
         '';
       if (body.message.date) {
-        // Nếu date > 10^12 thì đã là milliseconds, ngược lại là seconds
+        // Náº¿u date > 10^12 thÃ¬ Ä‘Ã£ lÃ  milliseconds, ngÆ°á»£c láº¡i lÃ  seconds
         timestamp = body.message.date > 10000000000 ? body.message.date : body.message.date * 1000;
       }
     }
@@ -101,73 +100,136 @@ app.post(['/', '/webhook'], async (req, res) => {
     }
 
     if (!text) {
-      console.log('⚠️ Không có text trong tin nhắn');
+      console.log('âš ï¸ KhÃ´ng cÃ³ text trong tin nháº¯n');
       return;
     }
     if (!chatId) {
-      console.log('⚠️ Không có chatId — kiểm tra lại format webhook');
-      console.log('Tất cả keys:', Object.keys(body));
+      console.log('âš ï¸ KhÃ´ng cÃ³ chatId â€” kiá»ƒm tra láº¡i format webhook');
+      console.log('Táº¥t cáº£ keys:', Object.keys(body));
       return;
     }
 
-    console.log(`📩 Tin nhắn: "${text}" | Chat: ${chatId} | Từ: ${senderId}`);
+    console.log(`ðŸ“© Tin nháº¯n: "${text}" | Chat: ${chatId} | Tá»«: ${senderId}`);
 
-    // === Trích xuất số seri ===
+    // === TrÃ­ch xuáº¥t sá»‘ seri ===
     const seri = extractSeri(text);
     if (!seri) {
-      console.log('ℹ️ Không tìm thấy số seri, bỏ qua');
+      console.log('â„¹ï¸ KhÃ´ng tÃ¬m tháº¥y sá»‘ seri, bá» qua');
       return;
     }
 
-    console.log(`🔢 Seri tìm thấy: ${seri}`);
+    console.log(`ðŸ”¢ Seri tÃ¬m tháº¥y: ${seri}`);
 
-    // === Xử lý bất đồng bộ ===
+    // === Xá»­ lÃ½ báº¥t Ä‘á»“ng bá»™ ===
     processQue(seri, chatId, timestamp).catch(err => {
-      console.error('❌ Lỗi processQue:', err);
+      console.error('âŒ Lá»—i processQue:', err);
     });
 
   } catch (err) {
-    console.error('❌ Webhook error:', err);
+    console.error('âŒ Webhook error:', err);
   }
 });
 
 // ============================================================
-//  Xử lý lập quẻ
+//  Xá»­ lÃ½ láº­p quáº»
 // ============================================================
 async function processQue(seri, chatId, timestamp) {
   const date = new Date(timestamp);
-  // Đảm bảo dùng múi giờ Việt Nam
+  // Äáº£m báº£o dÃ¹ng mÃºi giá» Viá»‡t Nam
   const vnTime = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
 
-  console.log(`⏳ Lập quẻ seri ${seri} — thời gian: ${vnTime.toLocaleString('vi-VN')}`);
+  console.log(`â³ Láº­p quáº» seri ${seri} â€” thá»i gian: ${vnTime.toLocaleString('vi-VN')}`);
 
-  // Báo cho user biết đang xử lý
-  await sendMessage(chatId, `⏳ Đang lập quẻ seri ${seri}...`).catch(() => {});
+  // BÃ¡o cho user biáº¿t Ä‘ang xá»­ lÃ½
+  await sendMessage(chatId, `â³ Äang láº­p quáº» seri ${seri}...`).catch(() => {});
 
   try {
-    // Chụp ảnh quẻ
+    // Chá»¥p áº£nh quáº»
     const imagePath = await captureQueImage(seri, vnTime);
-    console.log(`📸 Đã chụp ảnh: ${imagePath}`);
+    console.log(`ðŸ“¸ ÄÃ£ chá»¥p áº£nh: ${imagePath}`);
 
-    // Gửi ảnh về chat
+    // Gá»­i áº£nh vá» chat
     await sendPhoto(chatId, imagePath);
-    console.log(`✅ Đã gửi ảnh về chat ${chatId}`);
+    console.log(`âœ… ÄÃ£ gá»­i áº£nh vá» chat ${chatId}`);
 
-    // Xóa file tạm
+    // XÃ³a file táº¡m
     const fs = require('fs');
     try { fs.unlinkSync(imagePath); } catch (e) { /* ignore */ }
 
   } catch (err) {
-    console.error(`❌ Lỗi:`, err.message);
-    await sendMessage(chatId, `❌ Lỗi lập quẻ: ${err.message}`).catch(() => {});
+    console.error(`âŒ Lá»—i:`, err.message);
+    await sendMessage(chatId, `âŒ Lá»—i láº­p quáº»: ${err.message}`).catch(() => {});
   }
 }
 
+const axios = require('axios');
+const fs = require('fs');
+const FormData = require('form-data');
+const path = require('path');
+
 // ============================================================
-//  Khởi động server
+//  API ZALO - XÃ³a sáº¡ch dáº¥u cÃ¡ch thá»«a trong Token
 // ============================================================
+const BOT_TOKEN = () => (process.env.ZALO_BOT_TOKEN || '').replace(/\s+/g, '');
+const BASE_URL = () => `https://bot-api.zaloplatforms.com/bot${BOT_TOKEN()}`;
+
+async function sendMessage(chatId, text) {
+  try {
+    const url = `${BASE_URL()}/sendMessage`;
+    console.log(`ðŸ“¤ sendMessage â†’ chat: ${chatId}`);
+
+    const response = await axios.post(url, {
+      chat_id: chatId,
+      text: text
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000
+    });
+
+    console.log('ðŸ“¤ sendMessage response:', JSON.stringify(response.data));
+    return response.data;
+  } catch (err) {
+    console.error('âŒ sendMessage error:', err.response?.data || err.message);
+    throw err;
+  }
+}
+
+async function sendPhoto(chatId, imagePath, caption = '') {
+  try {
+    const url = `${BASE_URL()}/sendPhoto`;
+    console.log(`ðŸ“¤ sendPhoto â†’ chat: ${chatId}, file: ${path.basename(imagePath)}`);
+
+    const form = new FormData();
+    form.append('chat_id', String(chatId));
+    form.append('photo', fs.createReadStream(imagePath), {
+      filename: path.basename(imagePath),
+      contentType: 'image/png'
+    });
+    if (caption) {
+      form.append('caption', caption);
+    }
+
+    const response = await axios.post(url, form, {
+      headers: { ...form.getHeaders() },
+      timeout: 30000,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    });
+
+    console.log('ðŸ“¤ sendPhoto response:', JSON.stringify(response.data));
+    return response.data;
+  } catch (err) {
+    console.error('âŒ sendPhoto error:', err.response?.data || err.message);
+    throw err;
+  }
+}
+
+
+// ============================================
+//  Kh?i d?ng server
+// ============================================
 app.listen(PORT, () => {
-  console.log(`\n🤖 Zalo Lục Hào Bot đang chạy trên port ${PORT}`);
-  console.log(`📡 Webhook URL: https://<your-domain>/webhook`);
-  console.log(`⏰ Khởi động lúc: ${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}\n`);
+  console.log("\n?? Zalo L?c Hào Bot dang ch?y trên port " + PORT);
+  console.log("?? Webhook URL: https://<your-domain>/webhook");
+  console.log("? Kh?i d?ng lúc: " + new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) + "\n");
 });
