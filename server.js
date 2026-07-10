@@ -167,19 +167,19 @@ async function sendMessage(chatId, text) {
 
 async function sendPhoto(chatId, imagePath, caption = '') {
   try {
-    const url = `${BASE_URL()}/sendPhoto`;
+    let url = `${BASE_URL()}/sendPhoto?chat_id=${encodeURIComponent(chatId)}`;
+    if (caption) {
+      url += `&caption=${encodeURIComponent(caption)}`;
+    }
+    
     console.log(`sendPhoto -> chat: ${chatId}, file: ${path.basename(imagePath)} | Token length: ${BOT_TOKEN().length}`);
 
     const fileBuffer = fs.readFileSync(imagePath);
     const form = new FormData();
-    form.append('chat_id', String(chatId));
     form.append('photo', fileBuffer, {
       filename: path.basename(imagePath),
       contentType: 'image/png'
     });
-    if (caption) {
-      form.append('caption', caption);
-    }
 
     const response = await axios.post(url, form, {
       headers: { ...form.getHeaders() },
