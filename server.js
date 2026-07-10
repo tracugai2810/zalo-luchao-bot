@@ -181,8 +181,15 @@ async function sendPhoto(chatId, imagePath, caption = '') {
       contentType: 'image/png'
     });
 
+    const headers = form.getHeaders();
+    try {
+      headers['Content-Length'] = form.getLengthSync();
+    } catch (e) {
+      console.log('Cannot get length sync:', e.message);
+    }
+
     const response = await axios.post(url, form, {
-      headers: { ...form.getHeaders() },
+      headers: headers,
       timeout: 30000,
       maxContentLength: Infinity,
       maxBodyLength: Infinity
