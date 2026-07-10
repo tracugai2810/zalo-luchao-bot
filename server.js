@@ -104,12 +104,7 @@ app.post(['/', '/webhook'], async (req, res) => {
 
     console.log(`Seri tim thay: ${seri}`);
 
-    // Lay public URL cua server tu request
-    const host = req.get('host');
-    const protocol = 'https'; // Cuong che dung https de Zalo tai anh tin cay
-    const publicUrlBase = `${protocol}://${host}`;
-
-    processQue(seri, chatId, timestamp, publicUrlBase).catch(err => {
+    processQue(seri, chatId, timestamp).catch(err => {
       console.error('Loi processQue:', err);
     });
 
@@ -119,7 +114,7 @@ app.post(['/', '/webhook'], async (req, res) => {
 });
 
 // Xu ly lap que
-async function processQue(seri, chatId, timestamp, publicUrlBase) {
+async function processQue(seri, chatId, timestamp) {
   const date = new Date(timestamp);
   const vnTime = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
 
@@ -128,24 +123,51 @@ async function processQue(seri, chatId, timestamp, publicUrlBase) {
   try {
     const imagePath = await captureQueImage(seri, vnTime);
     const filename = path.basename(imagePath);
-    const publicImageUrl = `${publicUrlBase}/temp/${filename}`;
-    console.log(`Da chup anh: ${imagePath} | Public URL: ${publicImageUrl}`);
+    console.log(`Da chup anh: ${imagePath}. Dang upload len Catbox...`);
 
-    // Gui anh bang cach truyen link anh cho Zalo tu tai ve kem theo caption
+    // Upload anh len Catbox de lay link anh vinh vien
+    const publicImageUrl = await uploadToCatbox(imagePath);
+    console.log(`Da upload len Catbox: ${publicImageUrl}`);
+
+    // Xoa file anh tren bot ngay lap tuc sau khi upload len Catbox thanh cong
+    try {
+      fs.unlinkSync(imagePath);
+      console.log(`Da xoa file anh tam: ${filename}`);
+    } catch (e) {}
+
+    // Gui anh bang cach truyen link anh Catbox cho Zalo tu tai ve kem theo caption
     await sendPhoto(chatId, publicImageUrl, 'Quẻ của lão sư đây');
     console.log(`Da gui anh ve chat ${chatId}`);
-
-    // Xoa file anh sau 2 phut de Zalo kip tai ve tu server truoc khi xoa
-    setTimeout(() => {
-      try {
-        fs.unlinkSync(imagePath);
-        console.log(`Da xoa file anh tam: ${filename}`);
-      } catch (e) {}
-    }, 2 * 60 * 1000);
 
   } catch (err) {
     console.error(`Loi processQue:`, err.message);
     await sendMessage(chatId, `Co loi xay ra khi lap que: ${err.message}`).catch(() => {});
+  }
+}
+
+// Ham upload anh len Catbox.moe de lay link vinh vien (an danh, mien phi, khong can API Key)
+async function uploadToCatbox(imagePath) {
+  try {
+    const fileBuffer = fs.readFileSync(imagePath);
+    const blob = new Blob([fileBuffer], { type: 'image/png' });
+    
+    const form = new FormData();
+    form.append('reqtype', 'fileupload');
+    form.append('fileToUpload', blob, path.basename(imagePath));
+    
+    const response = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: form
+    });
+    
+    const url = await response.text();
+    if (!url.startsWith('https://')) {
+      throw new Error(`Upload len Catbox that bai: ${url}`);
+    }
+    return url.trim();
+  } catch (err) {
+    console.error('Loi uploadToCatbox:', err.message);
+    throw err;
   }
 }
 
