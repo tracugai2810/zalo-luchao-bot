@@ -74,9 +74,9 @@ async function captureQueImage(serial, date) {
 
     console.log(`🌐 Mở trang: ${url}`);
 
-    // Mở trang — chờ network ổn định
+    // Mở trang — chờ DOM sẵn sàng
     await page.goto(url, {
-      waitUntil: 'networkidle2',
+      waitUntil: 'domcontentloaded',
       timeout: 30000
     });
 

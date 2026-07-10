@@ -135,11 +135,13 @@ async function processQue(seri, chatId, timestamp, publicUrlBase) {
     await sendPhoto(chatId, publicImageUrl, 'Quẻ của lão sư đây');
     console.log(`Da gui anh ve chat ${chatId}`);
 
-    // Xoa file anh ngay lap tuc sau khi Zalo da tai xong
-    try {
-      fs.unlinkSync(imagePath);
-      console.log(`Da xoa file anh tam: ${filename}`);
-    } catch (e) {}
+    // Xoa file anh sau 2 phut de Zalo kip tai ve tu server truoc khi xoa
+    setTimeout(() => {
+      try {
+        fs.unlinkSync(imagePath);
+        console.log(`Da xoa file anh tam: ${filename}`);
+      } catch (e) {}
+    }, 2 * 60 * 1000);
 
   } catch (err) {
     console.error(`Loi processQue:`, err.message);
