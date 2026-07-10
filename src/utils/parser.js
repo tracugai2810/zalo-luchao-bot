@@ -11,21 +11,17 @@
 function extractSeri(text) {
   if (!text || typeof text !== 'string') return null;
 
-  // Xóa mention patterns
-  let cleaned = text
-    .replace(/\[@[^\]]*\]/g, '')       // Xóa [@xxx]
-    .replace(/@[\w\sÀ-ỹ]+(?=\d)/g, '') // Xóa @TênBot trước số
-    .replace(/seri\s*/gi, '')           // Xóa chữ "seri"
-    .trim();
-
-  // Tìm các chuỗi số
-  const matches = cleaned.match(/\d+/g);
+  // Tìm tất cả các chuỗi số liên tục
+  const matches = text.match(/\d+/g);
   if (!matches || matches.length === 0) return null;
 
-  // Trả về chuỗi số dài nhất (khả năng cao nhất là seri)
+  // Lấy chuỗi số dài nhất (thường là seri tiền)
   const seri = matches.reduce((a, b) => (a.length >= b.length ? a : b));
 
-  return seri || null;
+  // Seri tiền thường phải từ 3 chữ số trở lên để tránh bắt nhầm các số linh tinh trong câu
+  if (seri.length < 3) return null;
+
+  return seri;
 }
 
 module.exports = { extractSeri };
